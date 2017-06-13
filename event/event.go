@@ -1,7 +1,7 @@
 package event
 
 import (
-	"errors"
+	"fmt"
 	"time"
 
 	"github.com/gopherjs/gopherjs/js"
@@ -24,7 +24,7 @@ func init() {
 func navStart() (t int64, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = errors.New(r.(string))
+			err = r.(*js.Error)
 		}
 	}()
 	t = js.Global.Get("window").Get("performance").Get("timing").Get("navigationStart").Int64()
@@ -37,7 +37,7 @@ func navStart() (t int64, err error) {
 //
 // See https://developer.mozilla.org/en-US/docs/Web/API/Event
 type Event struct {
-	js.Object
+	*js.Object
 	// A boolean indicating whether the event bubbles up through the DOM or not. Read only.
 	Bubbles bool `js:"bubbles"`
 	// A boolean indicating whether the event is cancelable. Read only.
@@ -63,11 +63,11 @@ type Init struct {
 
 func New(name string, init Init) *Event {
 	o := js.Global.Get("Event").New(name, init)
-	return &Event{Object: *o}
+	return &Event{Object: o}
 }
 
 func Internalize(o *js.Object) *Event {
-	return &Event{Object: *o}
+	return &Event{Object: o}
 }
 
 func (e *Event) PreventDefault() {
@@ -91,17 +91,37 @@ func (e *Event) Timestamp() time.Time {
 	return time.Unix(ts/1000, (ts%1000)*1000000)
 }
 
-type Listener func(*Event)
+type EventHandler interface {
+	HandleEvent(*Event)
+}
+
+type EventHandlerFunc func(*Event)
 
 type ListenerOpts struct {
-	js.Object
+	*js.Object
 	Capture bool `js:"capture"`
 	Passive bool `js:"passive"`
 }
 
-func AddEventListener(target interface{}, name string, handler Listener, opts ListenerOpts) {
+func AddEventListener(target interface{}, name string, handler EventHandlerFunc, opts ListenerOpts) {
 	o := target.(*js.Object)
+	fmt.Printf("adding event listener %s\n", name)
 	o.Call("addEventListener", name, func(e *js.Object) {
 		handler(Internalize(e))
 	}, opts)
 }
+
+// type ErrorEvent struct {
+//     *Event
+//     *js.Object
+//     // A string containing a human-readable error message describing the problem. Read only.
+//     Message string `js:"message"`
+//     // A string containing the name of the script file in which the error occurred. Read only.
+//     Filename string `js:"filename"`
+//     // An integer containing the line number of the script file on which the error occurred. Read only.
+//     LineNo int `js:"lineno"`
+//     // An integer containing the column number of the script file on which the error occurred. Read only.
+//     ColNo int `js:"colno"`
+//     // A JavaScript Object that is concerned by the event. Read only.
+//     Error *js.Object `js:"error"`
+// }

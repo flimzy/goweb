@@ -1,6 +1,6 @@
 // +build js
 
-// File provides information about files and allows JavaScript in a web page to access their content.
+// Package file provides information about files and allows JavaScript in a web page to access their content.
 //
 // See https://developer.mozilla.org/en-US/docs/Web/API/File
 package file
@@ -18,7 +18,7 @@ type File struct {
 	Name string `js:"name"`
 }
 
-func Internalize(o *js.Object) *File {
+func InternalizeFile(o *js.Object) *File {
 	return &File{Blob: *blob.Internalize(o)}
 }
 
@@ -26,4 +26,18 @@ func Internalize(o *js.Object) *File {
 func (f *File) LastModified() time.Time {
 	ts := f.Get("lastModified").Int64()
 	return time.Unix(ts/1000, (ts%1000)*1000000)
+}
+
+type FileList struct {
+	*js.Object
+	// A read-only value indicating the number of files in the list.
+	Length int `js:"length"`
+}
+
+func InternalizeFileList(o *js.Object) *FileList {
+	return &FileList{Object: o}
+}
+
+func (l *FileList) Item(idx int) *File {
+	return InternalizeFile(l.Call("item", idx))
 }

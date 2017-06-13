@@ -11,15 +11,13 @@ import (
 )
 
 type FileList struct {
-	js.Object
+	*js.Object
 	// A read-only value indicating the number of files in the list.
-	Length uint `js:"length"`
+	Length int `js:"length"`
 }
 
 func Internalize(o *js.Object) *FileList {
-	return &FileList{
-		Object: *o,
-	}
+	return &FileList{Object: o}
 }
 
 func (l *FileList) Item(idx uint) *file.File {
